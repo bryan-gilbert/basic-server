@@ -1,35 +1,61 @@
 #!/bin/bash
 
+# ######################
+# Run this script on your development machine to configure a fresh remote server.
+
+## TODO  discuss the use of confirmation during the process and how to make this optional
+## Confirmations are essential when things are not working as expected.
+
+function usage() {
+    echo "Usage $0 server_ip_address new_user_name"
+    cat <<-____HERE
+    This script will configure a newly created Debian server accessible via an IP address (e.g. on Digital Ocean)
+    This script also creates a new user on the server.
+    You must provide the IP address and the name of a new user.
+
+    Before invoking this script:
+       - login to DigitalOcean
+       - create a droplet; (e.g. Debian, 1GB ($5/mth) Toronto or San Fran)
+       - make sure droplet includes your ssh key
+____HERE
+    exit 1
+}
+
 server_ip=$1
+new_user=$2
 
-# This script configures a remote DigitalOcean server called a 'droplet'
-
-# Before invoking this script:
-#   - login to DigitalOcean
-#   - create a droplet; (e.g. Debian, 1GB ($5/mth) Toronto or San Fran)
-#   - make sure droplet includes your ssh key
-
-
-# Then, from your desktop / laptop run:  ./configure_droplet.sh "server_ip"
-#   - where "server_ip" is the ip address of the newly instantiated DigitalOcean server
 
 if [[ -z "$server_ip" ]]; then
-    echo 'Error:  you must provide the IP address of the remote server'
+    usage
+    exit
+fi
+
+if [[ -z "$new_user" ]]; then
+    usage
     exit
 fi
 
 
-echo Create remote sudo user: $USER
+echo Create remote sudo user: "${new_user}" on "${server_ip}"
 
 echo ''
 
-echo What will be the password for $USER on "${server_ip}"
-read new_password
+echo What will be the password for "${new_user}" on "${server_ip}"
+read -s -p "password " new_password
+
+echo Enter the password again
+read -s -p "password " new_password2
+
+if [[ $new_password != $new_password2 ]]; then
+    echo Passwords do not match
+    exit
+fi
 
 echo ''
 
-read -e -p "SSH Port? " -i "22" ssh_port
-echo "${ssh_port}"
+# Can check port usage here: https://en.wikipedia.org/wiki/List_of_TCP_and_UDP_port_numbers
+read -p "SSH Port? [22] " ssh_port
+ssh_port=${ssh_port:-22}
 
 echo ''
 
@@ -47,6 +73,9 @@ do
     esac
 done
 
+echo "user: ${new_user} on ${server_ip} port: ${ssh_port} shell: ${remote_shell} "
+read -p "Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
+
 echo ''
 
 echo '***************** Delete Known Host Key - if one exists ********************'
@@ -55,48 +84,56 @@ ssh-keygen -f $HOME/.ssh/known_hosts -R "${server_ip}"
 echo ''
 echo ''
 
+function runOne (  ) {
+    script=$1
+    read -p "Run [y] or skip[n] ${script}? (Y/N): " confirm
+    if [[ $confirm == [yY] ]]
+    then
+        ssh root@"${server_ip}" "bash -s" -- < ./src/$script "${new_user}" "${new_password}" "${remote_shell}" "${ssh_port}"
+        echo ''
+        echo ''
+    else
+        echo 'Skipped ${script}'
+    fi
+}
+
 echo Install basic components on "${server_ip}"
-ssh root@"${server_ip}" "bash -s" -- < ./src/basic_setup.sh "$USER" "${new_password}" "${remote_shell}" "${ssh_port}"
+runOne basic_setup.sh
 
-echo ''
-echo ''
+echo Create "${new_user}" on "${server_ip}" using
+runOne create_new_user.sh
 
-echo Creating $USER on "${server_ip}" using this password: ${new_password}
-ssh root@"${server_ip}" "bash -s" -- < ./src/create_new_user.sh "$USER" "${new_password}" "${remote_shell}" "${ssh_port}"
+echo Install Docker and Docker Compose
+runOne docker.sh
 
-echo ''
-echo ''
+echo Install Node and NPM
+runOne node.sh
 
-echo Installing Docker and Docker Compose
-ssh root@"${server_ip}" "bash -s" -- < ./src/docker.sh "$USER" "${new_password}" "${remote_shell}" "${ssh_port}"
-
-echo ''
-echo ''
+echo Install Certbot
+runOne certbot.sh
 
 
 echo Configure the Uncomplicated Firewall
 # Modify the firewall configuration but don't enable yet as we'll be locked out if the SSH port has changed
-ssh root@"${server_ip}" "bash -s" -- < ./src/firewall.sh "$USER" "${new_password}" "${remote_shell}" "${ssh_port}"
-
-echo ''
-echo ''
+runOne firewall.sh
 
 echo Make the SSH Daemon more secure
 # Modify the SSH Daemon configuration but don't enable it yet as we'll be locked out if the SSH port has changed
-ssh root@"${server_ip}" "bash -s" -- < ./src/ssh_daemon.sh "$USER" "${new_password}" "${remote_shell}" "${ssh_port}"
-
-echo ''
-echo ''
+runOne ssh_daemon.sh
 
 echo Enable changes to the firewall and SSH Daemon
-# After this command is executed, root can no longer ssh and the new ssh_port (if changed) is active
+echo After this command is executed, root can no longer ssh and the new ssh_port ${ssh_port} will be active
+read -p "Continue? (Y/N): " confirm && [[ $confirm == [yY] || $confirm == [yY][eE][sS] ]] || exit 1
 ssh root@"${server_ip}" 'service ssh restart; ufw --force enable; ufw status'
 
-
 if [[ "${remote_shell}" == 'zsh' ]]; then
-
-   ssh -p"${ssh_port}" $USER@"${server_ip}" "bash -s" -- < ./src/oh-my-zsh-install.sh "$USER" "${new_password}" "${remote_shell}" "${ssh_port}"
-
+    runOne oh-my-zsh-install.sh
 fi
 
+echo ""
+echo "You can now log on with the following"
+echo "ssh ${new_user}@${server_ip} -p ${ssh_port}"
 
+echo ''
+echo Suggest you next run
+echo "./configure_user.sh ${server_ip} ${new_user}"
