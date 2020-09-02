@@ -6,7 +6,9 @@ echo '************* Installing Docker *****************'
 
 apt-get install -y apt-transport-https ca-certificates gnupg2 software-properties-common
 
-curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+## Assume we are running as root otherwise use this
+# curl -fsSL https://download.docker.com/linux/debian/gpg | sudo apt-key add -
+curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
 
 echo ''
 echo ''
@@ -26,22 +28,13 @@ if [[ $FINGERPRINT == *$DOCKER_FINGERPRINT* ]]; then
 
   echo '************* Installing Docker Compose *****************'
 
-  curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-  compose
+  curl -L "https://github.com/docker/compose/releases/download/1.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 
   chmod +x /usr/local/bin/docker-compose
 
   docker-compose --version
 
   echo '************* Docker and Docker Compose Installed *******************'
-
-  echo ''
-  echo ''
-
-  echo '************* Installing Nodejs and NPM *******************'
-
-  apt-get install -y nodejs npm
-
-  echo '************* Installed Nodejs and NPM *******************'
 
 else
 

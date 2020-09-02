@@ -3,7 +3,7 @@
 
 : "${new_user:=$1}"
 : "${new_password:=$2}"
-: "${new_shell:=$3}"
+: "${remote_shell:=$3}"
 
 if [[ -z "${new_user}" ]]; then
 
@@ -19,9 +19,9 @@ if [[ -z "${new_password}" ]]; then
 
 fi
 
-if [[ -z "${new_shell}" ]]; then
+if [[ -z "${remote_shell}" ]]; then
 
-    echo ******** Required parameter new_shell not set ********
+    echo ******** Required parameter remote_shell not set ********
     exit
 
 fi
@@ -31,15 +31,18 @@ new_user_homedir=/home/"${new_user}"
 
 addgroup ssh-access
 
-if [[ "${new_shell}" == 'zsh' ]]; then
+# prepare for docker. Allow this user to run docker commands without needing sudo
+addgroup docker
+
+if [[ "${remote_shell}" == 'zsh' ]]; then
 
    apt-get install -y zsh
 
 fi
 
-echo Create user: "${new_user}"using password: "${new_password}"
+echo Create user: "${new_user}" using given password
 # Create the user; add to group; create home directory (-m); set password hashed
-useradd -G users,sudo,ssh-access -m -s /bin/"${new_shell}" -p $(echo "${new_password}" | openssl passwd -1 -stdin) "${new_user}"
+useradd -G users,sudo,ssh-access,docker -m -s /bin/"${remote_shell}" -p $(echo "${new_password}" | openssl passwd -1 -stdin) "${new_user}"
 
 echo Show information about the user:
 getent passwd "${new_user}"
