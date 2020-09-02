@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-echo adding a favorite alias
-alias ll='ls -lahG'
-
 echo Set timezone
 timedatectl set-timezone America/Vancouver
 
@@ -14,6 +11,5 @@ apt-get update && apt-get -y upgrade
 
 echo Installing essentials
 apt-get install -y git curl git-core wget
-
 
 exit

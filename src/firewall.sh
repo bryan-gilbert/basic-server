@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-: "${ssh_port:=$4}"
+: "${ssh_port:=$1}"
 
 if [[ -z "${ssh_port}" ]]; then
 
@@ -28,8 +28,8 @@ ufw allow 123/udp
 # We can't turn on firewall yet as the SSH Port may have changed
 # ufw --force enable
 
-# check the status
-ufw status
+# list all the rules even though the firewall is not yet enabled
+ufw show added
 
 exit
 

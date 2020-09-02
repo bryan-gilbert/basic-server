@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-: "${ssh_port:=$4}"
+: "${ssh_port:=$1}"
 
 if [[ -z "${ssh_port}" ]]; then
 
@@ -23,8 +23,7 @@ sed -i '$ a AllowGroups ssh-access' /etc/ssh/sshd_config
 
 diff --color=always /etc/ssh/sshd_config.BAK /etc/ssh/sshd_config
 
-
-# We cannot restart the ssh service:
-# service ssh restart
+echo Restart the ssh service later
+echo $ service ssh restart
 
 exit
