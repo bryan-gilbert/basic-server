@@ -65,3 +65,10 @@ files that track access requests because it eliminates all but the most tenaciou
 ## Shell
 The droplet configure script allows for the admin user to have bash or zsh shell.
 
+## Digital Ocean metadata
+
+```
+export HOSTNAME=$(curl -s http://169.254.169.254/metadata/v1/hostname)
+export PUBLIC_IPV4=$(curl -s http://169.254.169.254/metadata/v1/interfaces/public/0/ipv4/address)
+echo Droplet: $HOSTNAME, IP Address: $PUBLIC_IPV4
+```
