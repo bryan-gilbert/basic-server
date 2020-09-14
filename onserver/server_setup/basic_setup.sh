@@ -12,4 +12,10 @@ apt-get update && apt-get -y upgrade
 echo Installing essentials
 apt-get install -y git curl git-core wget
 
+echo Installing rsync
+# rsync is handy if you want to copy files from your local to your server
+# If you change the SSH port ....
+# rsync -ru -e 'ssh -p 8022' /local_project/* user@IP:/home/user/project
+apt-get install rsync
+
 exit
